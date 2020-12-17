@@ -6,10 +6,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/mattn/go-sqlite3"
 	"google.golang.org/grpc"
 	"log"
 	"net"
+	"os"
 	"strings"
 )
 
@@ -17,7 +18,7 @@ var (
 	ports = []string{":10001", ":10002", ":10003"}
 )
 
-// server is used to implement helloworld.GreeterServer.
+// server is used to implement portsgrpc
 type server struct {
 	pb.UnimplementedPortsDbServer
 }
@@ -26,17 +27,25 @@ func (s *server) Upsert(ctx context.Context, in *pb.Ports) (*pb.Response, error)
 	log.Printf("Received ports %#v", in.PortsBody)
 
 	config := types.SetupConfig()
-	log.Printf("main.Upsert.config: %v\n", config)
+	log.Printf("portsgrpc.Upsert.config: %v\n", config)
 
 	/*
-		All the database functions will be put here because of context issues.
-		When I've tried to set the context.WithValue variable set the
-		database connection object, it has a strange behave, return
-		database closed message
+		All the database functions will be implemented here because of context issues.
+		When I've tried to set context.WithValue with a variable to the
+		database connection object, a strange behave happen, returning
+		database closed message.
 	*/
-	dns := config.MysqlUsername + ":" + config.MysqlPassword + "@tcp(" + config.MysqlAddr + ")/mysql"
-	log.Printf("portsgrpc.Upsert.db.Connect: %s\n", dns)
-	db, err := sql.Open("mysql", dns)
+	if _, err := os.Stat(config.SqlitePath); err != nil {
+		log.Printf("portsgrpc.Upsert.config: %v - creating new database file\n", err)
+		file, err := os.Create(config.SqlitePath) // Create SQLite file
+		if err != nil {
+			log.Printf("portsgrpc.Upsert.db.Connect: %v\n", err)
+			return &pb.Response{Code: "portsgrpc.Upsert.db.Connect", Message: err.Error()}, err
+		}
+		file.Close()
+		log.Printf("portsgrpc.Upsert.config: Database file '%s' created", config.SqlitePath)
+	}
+	db, err := sql.Open("sqlite3", config.SqlitePath)
 	if err != nil {
 		log.Printf("portsgrpc.Upsert.db.Connect: %v\n", err)
 		return &pb.Response{Code: "portsgrpc.Upsert.db.Connect", Message: err.Error()}, err
@@ -55,7 +64,7 @@ func (s *server) Upsert(ctx context.Context, in *pb.Ports) (*pb.Response, error)
 		timezone varchar(50),
 		unlocs varchar(500),
 		code varchar (100)
-	);` // SQL Statement for Create Table
+	) WITHOUT ROWID;` // SQL Statement for Create Table
 
 	statement, err := db.Prepare(sql) // Prepare SQL Statement
 	if err != nil {
@@ -144,7 +153,7 @@ func (s *server) Upsert(ctx context.Context, in *pb.Ports) (*pb.Response, error)
 	}
 
 	return &pb.Response{
-		Code: "portsgrpc.Upsert-finished",
+		Code:    "portsgrpc.Upsert-finished",
 		Message: "Ports saved in the database.",
 	}, nil
 }

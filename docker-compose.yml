@@ -1,28 +1,12 @@
 version: '3.7'
 
 services:
-  db:
-    image: mysql
-    command: --default-authentication-plugin=mysql_native_password
-    restart: always
-    ports:
-      - "3306:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: "${MYSQL_PASSWORD}"
-    volumes:
-      - ./mysql:/var/lib/mysql
-    networks:
-      network_ports:
-        ipv4_address: 172.20.32.2
-
   portdomainservice:
     container_name: altran-golang-portdomainservice
     build:
       context: .
       dockerfile: Dockerfile
     restart: always
-    depends_on:
-      - db
     volumes:
       - './:/tmp'
     ports:
@@ -32,15 +16,4 @@ services:
     environment:
       GOMAXPROCS: "${GOMAXPROCS}"
       GRPC_ADDRESS: "${GRPC_ADDRESS}"
-      MYSQL_ADDR: "${MYSQL_ADDR}"
-      MYSQL_USERNAME: "${MYSQL_USERNAME}"
-      MYSQL_PASSWORD: "${MYSQL_PASSWORD}"
-    networks:
-      network_ports:
-
-networks:
-  network_ports:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.32.0/24
+      SQLITE_PATH: "${SQLITE_PATH}"
