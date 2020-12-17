@@ -1,0 +1,17 @@
+version: '3.7'
+
+services:
+
+  clientapi:
+    container_name: altran-golang-portdomainservice
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - './:/tmp'
+    ports:
+      - "${GRPC_PORT}:${GRPC_PORT}"
+    environment:
+      - GOMAXPROCS=4
+      - GRPC_PORT=${GRPC_PORT}
+      - SQLITE_PATH=${SQLITE_PATH}
