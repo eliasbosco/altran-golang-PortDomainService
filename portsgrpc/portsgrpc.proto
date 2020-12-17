@@ -2,6 +2,10 @@ syntax = "proto3";
 package portsgrpc;
 
 message Ports {
+    repeated PortsBody ports_body = 1;
+}
+
+message PortsBody {
     string port_id = 1;
     string name = 2;
     string city = 3;
@@ -21,5 +25,5 @@ message Response {
 }
 
 service PortsDb {
-  rpc Upset(Ports) returns (Response) {}
+  rpc Upsert(Ports) returns (Response) {}
 }

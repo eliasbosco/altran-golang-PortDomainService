@@ -4,9 +4,10 @@ import "os"
 
 //Config all configurations variable used to connect to services
 type Config struct {
-	GrpcAddress string
-	GrpcPort    string
-	SQLitePath  string
+	GrpcAddress   string
+	MysqlAddr     string
+	MysqlUsername string
+	MysqlPassword string
 }
 
 //SetupConfig Using environment variables to setup all the configuration's variables
@@ -18,16 +19,22 @@ func SetupConfig() Config {
 		config.GrpcAddress = os.Getenv("GRPC_ADDRESS")
 	}
 
-	if os.Getenv("GRPC_PORT") == "" {
-		panic("No gRPC server port address informed.")
+	if os.Getenv("MYSQL_ADDR") == "" {
+		config.MysqlAddr = "172.17.0.1:3306"
 	} else {
-		config.GrpcPort = os.Getenv("GRPC_PORT")
+		config.MysqlAddr = os.Getenv("MYSQL_ADDR")
 	}
 
-	if os.Getenv("SQLITE_PATH") == "" {
-		config.SQLitePath = "/tmp/ports.db"
+	if os.Getenv("MYSQL_USERNAME") == "" {
+		panic("No mysql username informed.")
 	} else {
-		config.SQLitePath = os.Getenv("SQLITE_PATH")
+		config.MysqlUsername = os.Getenv("MYSQL_USERNAME")
+	}
+
+	if os.Getenv("MYSQL_PASSWORD") == "" {
+		panic("No mysql password informed.")
+	} else {
+		config.MysqlPassword = os.Getenv("MYSQL_PASSWORD")
 	}
 
 	return config
