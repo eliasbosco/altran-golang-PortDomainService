@@ -11,6 +11,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -21,6 +22,94 @@ var (
 // server is used to implement portsgrpc
 type server struct {
 	pb.UnimplementedPortsDbServer
+}
+
+func (s *server) GetPortsDb(ctx context.Context, in *pb.Request) (*pb.Ports, error) {
+	log.Printf("Fetch database results with request: %#v ...", in)
+
+	config := types.SetupConfig()
+
+	if _, err := os.Stat(config.SqlitePath); err != nil {
+		log.Printf("portsgrpc.Upsert.config: %v - creating new database file\n", err)
+		file, err := os.Create(config.SqlitePath) // Create SQLite file
+		if err != nil {
+			log.Printf("connectSqlite.File: %v\n", err)
+			return nil, err
+		}
+		file.Close()
+		log.Printf("connectSqlite.File: Database file '%s' created", config.SqlitePath)
+	}
+	db, err := sql.Open("sqlite3", config.SqlitePath)
+	if err != nil {
+		log.Printf("connectSqlite.Open: %v\n", err)
+		return nil, err
+	}
+	defer db.Close()
+
+	//Fetch database results
+	var rows *sql.Rows
+	sql := "SELECT port_id,name,city,country,alias,regions,coordinates,province,timezone,unlocs,code FROM ports"
+
+	if in.PortId != "" {
+		sql += " WHERE port_id = ?"
+		rows, err = db.Query(sql, in.PortId)
+		if err != nil {
+			log.Printf("portsgrpc.GetPortsBody.Query: %v\n", err)
+			return &pb.Ports{}, err
+		}
+	} else {
+		sql += " OFFSET " + string(in.Skip) + " LIMIT " + string(in.Limit)
+		rows, err = db.Query(sql)
+		if err != nil {
+			log.Printf("portsgrpc.GetPortsBody.Query: %v\n", err)
+			return &pb.Ports{}, err
+		}
+	}
+	defer rows.Close()
+
+	var portsBodyArr []*pb.PortsBody
+	for rows.Next() { // Iterate and fetch the records from result cursor
+		_portId := ""
+		name := ""
+		city := ""
+		country := ""
+		alias := ""
+		regions := ""
+		coordinates := ""
+		province := ""
+		timezone := ""
+		unlocs := ""
+		code := ""
+		rows.Scan(&_portId,&name,&city,&country,&alias,&regions,&coordinates,&province,&timezone,&unlocs,&code)
+
+		var _coord []float32
+		if coordinates != "" {
+			coordArr := strings.Split(coordinates[1:len(coordinates)-1], " ")
+			for _, c := range coordArr {
+				value, err := strconv.ParseFloat(c, 32)
+				if err != nil {
+					// do something sensible
+				}
+				_coord = append(_coord, float32(value))
+			}
+		}
+		portsBodyArr = append(portsBodyArr, &pb.PortsBody{
+			PortId: _portId,
+			Name: name,
+			City: city,
+			Country: country,
+			Alias: strings.Split(alias, ","),
+			Regions: strings.Split(regions, ","),
+			Coordinates: _coord,
+			Province: province,
+			Timezone: timezone,
+			Unlocs: strings.Split(unlocs, ","),
+			Code: code,
+		})
+	}
+
+	log.Printf("_ports: %#v\n", &portsBodyArr)
+	return &pb.Ports{PortsBody: portsBodyArr}, nil
 }
 
 func (s *server) Upsert(ctx context.Context, in *pb.Ports) (*pb.Response, error) {
@@ -39,16 +128,16 @@ func (s *server) Upsert(ctx context.Context, in *pb.Ports) (*pb.Response, error)
 		log.Printf("portsgrpc.Upsert.config: %v - creating new database file\n", err)
 		file, err := os.Create(config.SqlitePath) // Create SQLite file
 		if err != nil {
-			log.Printf("portsgrpc.Upsert.db.Connect: %v\n", err)
-			return &pb.Response{Code: "portsgrpc.Upsert.db.Connect", Message: err.Error()}, err
+			log.Printf("connectSqlite.File: %v\n", err)
+			return nil, err
 		}
 		file.Close()
-		log.Printf("portsgrpc.Upsert.config: Database file '%s' created", config.SqlitePath)
+		log.Printf("connectSqlite.File: Database file '%s' created", config.SqlitePath)
 	}
 	db, err := sql.Open("sqlite3", config.SqlitePath)
 	if err != nil {
-		log.Printf("portsgrpc.Upsert.db.Connect: %v\n", err)
-		return &pb.Response{Code: "portsgrpc.Upsert.db.Connect", Message: err.Error()}, err
+		log.Printf("connectSqlite.Open: %v\n", err)
+		return nil, err
 	}
 	defer db.Close()
 
@@ -160,10 +249,10 @@ func (s *server) Upsert(ctx context.Context, in *pb.Ports) (*pb.Response, error)
 
 func main() {
 	config := types.SetupConfig()
-	grpcAddress := strings.Split(config.GrpcAddress, ",")
-	log.Printf("main.grpcAddress: %#v\n", grpcAddress)
+	log.Printf("main.SetupConfig: %#v\n", config)
 
 	/***** Start three GreeterServers(with one of them to be the slowServer). *****/
+	grpcAddress := strings.Split(config.GrpcAddress, ",")
 	for i := 0; i < 3; i++ {
 		lis, err := net.Listen("tcp", grpcAddress[i])
 		if err != nil {
