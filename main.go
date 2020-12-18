@@ -24,7 +24,7 @@ type server struct {
 }
 
 func (s *server) Upsert(ctx context.Context, in *pb.Ports) (*pb.Response, error) {
-	log.Printf("Received ports %#v", in.PortsBody)
+	log.Printf("Received ports %d records\n", len(in.PortsBody))
 
 	config := types.SetupConfig()
 	log.Printf("portsgrpc.Upsert.config: %v\n", config)

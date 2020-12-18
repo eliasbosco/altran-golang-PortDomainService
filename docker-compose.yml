@@ -1,4 +1,4 @@
-version: '3.7'
+version: '2.4'
 
 services:
   portdomainservice:
@@ -7,13 +7,23 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: always
+    mem_limit: 50M
     volumes:
       - './:/tmp'
     ports:
       - "10001:10001"
       - "10002:10002"
       - "10003:10003"
+    networks:
+      network_portdomainservice:
     environment:
       GOMAXPROCS: "${GOMAXPROCS}"
       GRPC_ADDRESS: "${GRPC_ADDRESS}"
       SQLITE_PATH: "${SQLITE_PATH}"
+
+networks:
+  network_portdomainservice:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.32.0/24
