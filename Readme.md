@@ -1,6 +1,6 @@
 # Altran Golang PortDomainService
 
-Following the requirements asked, this service is responsible to receive all request from the [ClientAPI](https://github.com/eliasbosco/altran-golang-ClientAPI) via gRPC and the ports data enveloped by protobuf binary protocol. The main routine put 3 or more gRPC servers up and it should be increased, depending on how much listeners the user need, inserting more addresses in .env file.
+Following the requirements asked, this service is responsible to receive all request from the [ClientAPI](https://github.com/eliasbosco/altran-golang-ClientAPI) via [gRPC](https://github.com/grpc/grpc-go/blob/d79063fdde284ef7722591e56c72143eea59c256/examples/features/debugging/server/main.go#L45) and the ports data enveloped by protobuf binary protocol. The main routine put 3 or more gRPC servers up and it should be increased, depending on how much listeners the user need, inserting more addresses in .env file.
 
 ## Containers
 
@@ -29,7 +29,7 @@ To shut the service off:
 $ docker-compose down
 ```
 
-[^Notice: every environments variables are set on &quot;.env&quot; file, at the project root.]: 
+Notice: every environments variables are set on &quot;.env&quot; file, at the project root.
 
 ## Resources
 
