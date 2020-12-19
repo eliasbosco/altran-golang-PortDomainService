@@ -1,3 +1,11 @@
+// Altran Golang PortDomainService
+// Following the requirements asked, this service is
+// responsible to receive all request from the
+// ClientAPI via gRPC and the ports data enveloped by
+// protobuf binary protocol. The main routine put 3 or
+// more gRPC servers up and it should be increased,
+// depending on how much listeners the user need,
+// inserting more addresses in .env file.
 package main
 
 import (
@@ -15,15 +23,13 @@ import (
 	"strings"
 )
 
-var (
-	ports = []string{":10001", ":10002", ":10003"}
-)
-
 // server is used to implement portsgrpc
 type server struct {
 	pb.UnimplementedPortsDbServer
 }
 
+// GetPortsDb handler responsible to fetch table ports
+// on sqlite and response the data to the gRPC transport
 func (s *server) GetPortsDb(ctx context.Context, in *pb.Request) (*pb.Ports, error) {
 	log.Printf("Fetch database results with request: %#v ...", in)
 
@@ -112,8 +118,10 @@ func (s *server) GetPortsDb(ctx context.Context, in *pb.Request) (*pb.Ports, err
 	return &pb.Ports{PortsBody: portsBodyArr}, nil
 }
 
+// Upsert gRPC handler responsible to receive the request
+// and migrate the Ports received object to sqlite records
 func (s *server) Upsert(ctx context.Context, in *pb.Ports) (*pb.Response, error) {
-	log.Printf("Received ports %d records\n", len(in.PortsBody))
+	log.Printf("portsgrpc.Upsert: Received ports %d records\n", len(in.PortsBody))
 
 	config := types.SetupConfig()
 	log.Printf("portsgrpc.Upsert.config: %v\n", config)
@@ -247,6 +255,7 @@ func (s *server) Upsert(ctx context.Context, in *pb.Ports) (*pb.Response, error)
 	}, nil
 }
 
+// Configure and startup all the gRPC servers
 func main() {
 	config := types.SetupConfig()
 	log.Printf("main.SetupConfig: %#v\n", config)
